@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nusrat Build — Architecture Drawn in Light</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a0b0d;
+    --ink-2:#131519;
+    --ink-3:#1b1e24;
+    --ivory:#f3efe4;
+    --ivory-dim:#c9c4b5;
+    --gold:#c8a25c;
+    --gold-2:#e8c987;
+    --bronze:#6b4f36;
+    --teal:#1c3733;
+    --glass:rgba(255,255,255,0.045);
+    --glass-border:rgba(255,255,255,0.09);
+    --serif:'Fraunces', serif;
+    --sans:'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  body{
+    background:var(--ink);
+    color:var(--ivory);
+    font-family:var(--sans);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold); color:var(--ink);}
+
+  a{color:inherit; text-decoration:none;}
+  button{font-family:inherit; cursor:pointer;}
+
+  /* ---------- utility ---------- */
+  .wrap{max-width:1280px; margin:0 auto; padding:0 32px;}
+  .eyebrow{
+    font-family:var(--sans); font-size:11.5px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--gold); font-weight:500; display:flex; align-items:center; gap:10px;
+  }
+  .eyebrow::before{content:''; width:22px; height:1px; background:var(--gold);}
+  h1,h2,h3{font-family:var(--serif); font-weight:400; letter-spacing:-0.01em; line-height:1.05;}
+  .reveal{opacity:0; transform:translateY(28px); transition:opacity 0.9s cubic-bezier(.16,.84,.44,1), transform 0.9s cubic-bezier(.16,.84,.44,1);}
+  .reveal.is-visible{opacity:1; transform:translateY(0);}
+  .reveal-delay-1{transition-delay:0.08s;}
+  .reveal-delay-2{transition-delay:0.16s;}
+  .reveal-delay-3{transition-delay:0.24s;}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:10px;
+    padding:15px 26px; border-radius:999px; font-size:13.5px; letter-spacing:0.04em;
+    border:1px solid var(--glass-border); background:var(--glass); backdrop-filter:blur(14px);
+    transition:border-color .35s ease, background .35s ease, transform .35s ease;
+    position:relative;
+  }
+  .btn:hover{border-color:var(--gold); transform:translateY(-2px);}
+  .btn-solid{ background:linear-gradient(135deg,var(--gold-2),var(--gold)); color:var(--ink); border:none; font-weight:600;}
+  .btn-solid:hover{ filter:brightness(1.08); box-shadow:0 8px 30px -8px rgba(200,162,92,0.55);}
+  .btn svg{width:14px; height:14px;}
+
+  /* ---------- loader ---------- */
+  #loader{
+    position:fixed; inset:0; z-index:999; background:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    transition:opacity 0.9s ease, visibility 0.9s ease;
+  }
+  #loader.hide{opacity:0; visibility:hidden;}
+  .loader-mark{font-family:var(--serif); font-size:15px; letter-spacing:0.35em; color:var(--ivory); text-transform:uppercase;}
+  .loader-bar{width:220px; height:1px; background:rgba(255,255,255,0.12); position:relative; overflow:hidden;}
+  .loader-bar span{position:absolute; inset:0; width:0%; background:var(--gold); transition:width .25s ease;}
+  .loader-pct{font-size:11px; letter-spacing:0.15em; color:var(--ivory-dim); font-variant-numeric:tabular-nums;}
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:200;
+    padding:22px 0; transition:padding .4s ease, background .4s ease, border-color .4s ease;
+    border-bottom:1px solid transparent;
+  }
+  header.scrolled{ padding:14px 0; background:rgba(10,11,13,0.72); backdrop-filter:blur(16px); border-bottom-color:var(--glass-border);}
+  nav{display:flex; align-items:center; justify-content:space-between;}
+  .brand{font-family:var(--serif); font-size:19px; letter-spacing:0.04em;}
+  .brand b{color:var(--gold); font-weight:500;}
+  .nav-links{display:flex; gap:38px; font-size:13px; letter-spacing:0.03em; color:var(--ivory-dim);}
+  .nav-links a{position:relative; padding-bottom:3px;}
+  .nav-links a::after{content:''; position:absolute; left:0; bottom:0; width:0; height:1px; background:var(--gold); transition:width .3s ease;}
+  .nav-links a:hover{color:var(--ivory);}
+  .nav-links a:hover::after{width:100%;}
+  .nav-cta{display:flex; align-items:center; gap:18px;}
+  .burger{display:none;}
+
+  @media (max-width:880px){
+    .nav-links{display:none;}
+    .nav-cta .btn span.long{display:none;}
+  }
+
+  /* ---------- hero ---------- */
+  #hero{
+    position:relative; height:100vh; min-height:680px; overflow:hidden;
+    background:
+      radial-gradient(ellipse 90% 60% at 75% 20%, rgba(107,79,54,0.35), transparent 60%),
+      linear-gradient(180deg, #0d0f13 0%, #0a0b0d 55%, #08090b 100%);
+  }
+  #hero-canvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+  .stars{position:absolute; inset:0; pointer-events:none;}
+  .star{position:absolute; width:2px; height:2px; border-radius:50%; background:var(--ivory); opacity:0.5; animation:twinkle 4s ease-in-out infinite;}
+  @keyframes twinkle{ 0%,100%{opacity:.15;} 50%{opacity:.75;} }
+
+  .hero-inner{
+    position:relative; z-index:5; height:100%; display:flex; flex-direction:column; justify-content:center;
+    padding-top:70px;
+  }
+  .hero-copy{max-width:640px;}
+  .hero-copy h1{
+    font-size:clamp(40px, 6.2vw, 84px); margin-top:18px; margin-bottom:22px; color:var(--ivory);
+  }
+  .hero-copy h1 em{font-style:italic; color:var(--gold);}
+  .hero-copy p{font-size:16.5px; line-height:1.7; color:var(--ivory-dim); max-width:460px; margin-bottom:34px; font-weight:300;}
+  .hero-actions{display:flex; gap:16px; flex-wrap:wrap;}
+
+  .scroll-cue{
+    position:absolute; bottom:38px; left:32px; z-index:5; display:flex; align-items:center; gap:12px;
+    font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ivory-dim);
+  }
+  .scroll-line{width:1px; height:46px; background:linear-gradient(var(--gold), transparent); position:relative; overflow:hidden;}
+  .scroll-line::after{content:''; position:absolute; top:-46px; left:0; width:100%; height:46px; background:linear-gradient(var(--gold-2), transparent); animation:scrollDrop 2.2s ease-in-out infinite;}
+  @keyframes scrollDrop{ 0%{top:-46px;} 100%{top:46px;} }
+
+  /* ---------- stats ---------- */
+  #stats{
+    border-top:1px solid var(--glass-border); border-bottom:1px solid var(--glass-border);
+    background:var(--ink-2);
+  }
+  .stats-row{display:grid; grid-template-columns:repeat(4,1fr); }
+  .stat{
+    padding:44px 30px; text-align:center; border-right:1px solid var(--glass-border);
+  }
+  .stat:last-child{border-right:none;}
+  .stat .num{font-family:var(--serif); font-size:40px; color:var(--gold-2); font-variant-numeric:tabular-nums;}
+  .stat .lbl{margin-top:8px; font-size:12px; letter-spacing:0.1em; text-transform:uppercase; color:var(--ivory-dim);}
+  @media (max-width:760px){ .stats-row{grid-template-columns:repeat(2,1fr);} .stat{border-bottom:1px solid var(--glass-border);} }
+
+  /* ---------- section shell ---------- */
+  section{position:relative; padding:120px 0;}
+  .section-head{max-width:640px; margin-bottom:64px;}
+  .section-head h2{font-size:clamp(30px,4vw,48px); margin-top:16px; color:var(--ivory);}
+  .section-head p{margin-top:18px; color:var(--ivory-dim); font-weight:300; line-height:1.7; max-width:480px;}
+
+  /* ---------- about ---------- */
+  #about .grid{display:grid; grid-template-columns:0.9fr 1.1fr; gap:80px; align-items:center;}
+  .blueprint-art{aspect-ratio:4/5; border:1px solid var(--glass-border); border-radius:4px; background:var(--ink-2); position:relative; overflow:hidden;}
+  .blueprint-art svg{width:100%; height:100%;}
+  .about-copy p{color:var(--ivory-dim); font-weight:300; line-height:1.85; font-size:15.5px; margin-bottom:20px;}
+  .about-copy p b{color:var(--ivory); font-weight:500;}
+  @media (max-width:900px){ #about .grid{grid-template-columns:1fr; gap:44px;} }
+
+  /* ---------- process ---------- */
+  #process{background:var(--ink-2);}
+  .process-list{border-top:1px solid var(--glass-border);}
+  .process-item{
+    display:grid; grid-template-columns:90px 1fr 1fr; gap:32px; padding:38px 0; border-bottom:1px solid var(--glass-border);
+    align-items:baseline;
+  }
+  .process-item .idx{font-family:var(--serif); font-size:15px; color:var(--gold); letter-spacing:0.05em;}
+  .process-item h3{font-size:24px; color:var(--ivory);}
+  .process-item p{color:var(--ivory-dim); font-weight:300; font-size:14.5px; line-height:1.7;}
+  @media (max-width:760px){ .process-item{grid-template-columns:1fr; gap:8px;} }
+
+  /* ---------- portfolio ---------- */
+  .portfolio-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:26px;}
+  .p-card{
+    border:1px solid var(--glass-border); border-radius:6px; overflow:hidden; background:var(--glass);
+    transition:transform .5s cubic-bezier(.16,.84,.44,1), border-color .5s ease;
+  }
+  .p-card:hover{transform:translateY(-8px); border-color:var(--gold);}
+  .p-visual{aspect-ratio:5/4; position:relative; overflow:hidden; background:linear-gradient(160deg,#1a1c21,#0d0e11);}
+  .p-visual svg{position:absolute; inset:0; width:100%; height:100%;}
+  .p-body{padding:24px;}
+  .p-body .tag{font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:var(--gold);}
+  .p-body h3{font-size:21px; margin-top:10px; color:var(--ivory);}
+  .p-body p{margin-top:8px; font-size:13.5px; color:var(--ivory-dim); font-weight:300;}
+  @media (max-width:900px){ .portfolio-grid{grid-template-columns:1fr;} }
+
+  /* ---------- testimonials ---------- */
+  #testimonials{background:var(--ink-2);}
+  .quote-wrap{max-width:760px; margin:0 auto; text-align:center; position:relative; min-height:220px;}
+  .quote{position:absolute; inset:0; opacity:0; transition:opacity .8s ease; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .quote.active{opacity:1; position:relative;}
+  .quote p{font-family:var(--serif); font-size:clamp(20px,2.6vw,30px); font-weight:400; font-style:italic; line-height:1.5; color:var(--ivory);}
+  .quote .who{margin-top:26px; font-size:12.5px; letter-spacing:0.08em; color:var(--gold); text-transform:uppercase;}
+  .dots{display:flex; justify-content:center; gap:9px; margin-top:38px;}
+  .dot{width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.18); transition:background .3s ease, transform .3s ease;}
+  .dot.active{background:var(--gold); transform:scale(1.25);}
+
+  /* ---------- contact ---------- */
+  #contact .box{
+    border:1px solid var(--glass-border); border-radius:8px; background:var(--glass);
+    padding:70px 60px; display:grid; grid-template-columns:1fr auto; gap:40px; align-items:center;
+  }
+  #contact .box h2{font-size:clamp(28px,3.6vw,42px); color:var(--ivory);}
+  #contact .box p{margin-top:14px; color:var(--ivory-dim); font-weight:300; max-width:420px;}
+  .contact-actions{display:flex; flex-direction:column; gap:14px;}
+  @media (max-width:800px){ #contact .box{grid-template-columns:1fr; padding:48px 30px;} }
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--glass-border); padding:60px 0 34px;}
+  .foot-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:40px; padding-bottom:50px;}
+  .foot-col h4{font-size:12px; letter-spacing:0.12em; text-transform:uppercase; color:var(--ivory-dim); margin-bottom:16px;}
+  .foot-col a{display:block; font-size:14px; color:var(--ivory-dim); margin-bottom:10px; transition:color .25s ease;}
+  .foot-col a:hover{color:var(--gold);}
+  .foot-brand p{margin-top:14px; font-size:13.5px; color:var(--ivory-dim); font-weight:300; max-width:280px; line-height:1.7;}
+  .foot-bottom{display:flex; justify-content:space-between; align-items:center; padding-top:30px; border-top:1px solid var(--glass-border); font-size:12px; color:var(--ivory-dim); flex-wrap:wrap; gap:12px;}
+  @media (max-width:760px){ .foot-grid{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+
+  <div id="loader">
+    <div class="loader-mark">NUSRAT&nbsp;BUILD</div>
+    <div class="loader-bar"><span id="loaderFill"></span></div>
+    <div class="loader-pct" id="loaderPct">0%</div>
+  </div>
+
+  <header id="siteHeader">
+    <div class="wrap">
+      <nav>
+        <div class="brand"><b>N</b>usrat Build</div>
+        <div class="nav-links">
+          <a href="#about">Studio</a>
+          <a href="#process">Process</a>
+          <a href="#portfolio">Portfolio</a>
+          <a href="#testimonials">Journal</a>
+          <a href="#contact">Contact</a>
+        </div>
+        <div class="nav-cta">
+          <a href="#contact" class="btn btn-solid"><span class="long">Book a</span> Consultation</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <section id="hero">
+    <canvas id="hero-canvas"></canvas>
+    <div class="stars" id="starsLayer"></div>
+    <div class="wrap hero-inner">
+      <div class="hero-copy">
+        <div class="eyebrow reveal">Nusrat Build — Architecture &amp; Construction</div>
+        <h1 class="reveal reveal-delay-1">Architecture<br>drawn in <em>light.</em></h1>
+        <p class="reveal reveal-delay-2">We design and build private residences where structure, light and landscape are considered as one continuous idea — from the first line on paper to the last stone set in place.</p>
+        <div class="hero-actions reveal reveal-delay-3">
+          <a href="#portfolio" class="btn btn-solid">Explore Portfolio</a>
+          <a href="#process" class="btn">Our Process</a>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-cue reveal reveal-delay-3"><div class="scroll-line"></div> Scroll</div>
+  </section>
+
+  <section id="stats">
+    <div class="wrap">
+      <div class="stats-row">
+        <div class="stat reveal"><div class="num" data-target="14">0</div><div class="lbl">Years Practicing</div></div>
+        <div class="stat reveal reveal-delay-1"><div class="num" data-target="86">0</div><div class="lbl">Projects Delivered</div></div>
+        <div class="stat reveal reveal-delay-2"><div class="num" data-target="120">0</div><div class="lbl">Clients Served</div></div>
+        <div class="stat reveal reveal-delay-3"><div class="num" data-target="6">0</div><div class="lbl">Countries</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about">
+    <div class="wrap grid">
+      <div class="blueprint-art reveal">
+        <svg viewBox="0 0 400 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="400" height="500" fill="#131519"/>
+          <g stroke="#c8a25c" stroke-width="1" opacity="0.7">
+            <rect x="60" y="260" width="280" height="140" />
+            <rect x="60" y="180" width="170" height="80" />
+            <line x1="60" y1="260" x2="60" y2="400"/>
+            <line x1="340" y1="260" x2="340" y2="400"/>
+            <line x1="120" y1="180" x2="120" y2="260"/>
+            <line x1="60" y1="150" x2="230" y2="150"/>
+            <line x1="60" y1="150" x2="60" y2="180"/>
+            <line x1="230" y1="150" x2="230" y2="180"/>
+          </g>
+          <g stroke="#5b4636" stroke-width="0.6" opacity="0.5">
+            <line x1="0" y1="400" x2="400" y2="400"/>
+            <line x1="90" y1="400" x2="90" y2="440"/>
+            <line x1="310" y1="400" x2="310" y2="440"/>
+            <line x1="90" y1="440" x2="310" y2="440"/>
+          </g>
+          <text x="60" y="120" fill="#c9c4b5" font-family="monospace" font-size="10" letter-spacing="2">SITE PLAN — 01</text>
+          <circle cx="200" cy="330" r="3" fill="#e8c987"/>
+        </svg>
+      </div>
+      <div class="about-copy">
+        <div class="eyebrow reveal">The Studio</div>
+        <h2 class="reveal reveal-delay-1" style="font-size:clamp(28px,3.6vw,42px); margin-top:16px; margin-bottom:26px;">Built on precision. Finished with restraint.</h2>
+        <p class="reveal reveal-delay-1"><b>Nusrat Build</b> is an architecture and construction studio working on private residences, villas and small hospitality projects. We keep every project small enough that the same team who draws it is the team who builds it.</p>
+        <p class="reveal reveal-delay-2">Our work favors honest materials — concrete, timber, stone and glass — arranged so that daylight becomes part of the floor plan rather than an afterthought.</p>
+        <p class="reveal reveal-delay-3">Every commission starts with the site, not the style. The land tells us where the building wants to stand.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="process">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow reveal">How We Work</div>
+        <h2 class="reveal reveal-delay-1">Five stages, one continuous line.</h2>
+        <p class="reveal reveal-delay-2">From first sketch to handed-over keys, every project follows the same disciplined sequence — nothing skipped, nothing rushed.</p>
+      </div>
+      <div class="process-list">
+        <div class="process-item reveal"><div class="idx">01</div><h3>Concept</h3><p>Site analysis, client brief and the first spatial studies — usually a week of drawing before a single wall is proposed.</p></div>
+        <div class="process-item reveal reveal-delay-1"><div class="idx">02</div><h3>Design Development</h3><p>Materials, structure and services are resolved together, so the drawings that reach the site are already buildable.</p></div>
+        <div class="process-item reveal reveal-delay-2"><div class="idx">03</div><h3>Permits &amp; Engineering</h3><p>We manage approvals and structural sign-off directly, so the client's only job is to keep choosing finishes.</p></div>
+        <div class="process-item reveal reveal-delay-3"><div class="idx">04</div><h3>Construction</h3><p>Our own site team runs the build, with weekly progress reviews shared with the client throughout.</p></div>
+        <div class="process-item reveal reveal-delay-3"><div class="idx">05</div><h3>Handover</h3><p>A final walkthrough, full documentation, and a maintenance plan for the first year in the house.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="portfolio">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow reveal">Selected Work</div>
+        <h2 class="reveal reveal-delay-1">A few recent residences.</h2>
+      </div>
+      <div class="portfolio-grid">
+        <div class="p-card reveal">
+          <div class="p-visual"><svg viewBox="0 0 300 240" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="#14161a"/><rect x="40" y="120" width="220" height="80" fill="#1f2228"/><rect x="40" y="90" width="140" height="40" fill="#232833" stroke="#c8a25c" stroke-width="0.5"/><rect x="60" y="140" width="180" height="40" fill="#0f4a44" opacity="0.5"/><line x1="0" y1="200" x2="300" y2="200" stroke="#c8a25c" stroke-width="0.5" opacity="0.4"/></svg></div>
+          <div class="p-body"><div class="tag">Residential — Hisor</div><h3>Terrace House</h3><p>A stepped concrete residence set into a hillside, opening fully to the valley below.</p></div>
+        </div>
+        <div class="p-card reveal reveal-delay-1">
+          <div class="p-visual"><svg viewBox="0 0 300 240" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="#14161a"/><rect x="30" y="130" width="240" height="70" fill="#1f2228"/><rect x="90" y="100" width="120" height="30" fill="#232833" stroke="#c8a25c" stroke-width="0.5"/><rect x="30" y="160" width="240" height="10" fill="#0f4a44" opacity="0.4"/><circle cx="250" cy="60" r="14" fill="#e8c987" opacity="0.15"/></svg></div>
+          <div class="p-body"><div class="tag">Villa — Varzob</div><h3>Riverline Villa</h3><p>A low, linear villa built along the water's edge with a cantilevered pool deck.</p></div>
+        </div>
+        <div class="p-card reveal reveal-delay-2">
+          <div class="p-visual"><svg viewBox="0 0 300 240" xmlns="http://www.w3.org/2000/svg"><rect width="300" height="240" fill="#14161a"/><rect x="60" y="110" width="180" height="90" fill="#1f2228"/><rect x="60" y="80" width="90" height="30" fill="#232833" stroke="#c8a25c" stroke-width="0.5"/><rect x="60" y="200" width="180" height="6" fill="#5b4636"/><line x1="150" y1="80" x2="150" y2="200" stroke="#c8a25c" stroke-width="0.4" opacity="0.5"/></svg></div>
+          <div class="p-body"><div class="tag">Renovation — Dushanbe</div><h3>Courtyard Residence</h3><p>A 1980s family home rebuilt around a new interior courtyard and garden.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="testimonials">
+    <div class="wrap">
+      <div class="section-head" style="margin:0 auto 56px; text-align:center;">
+        <div class="eyebrow reveal" style="justify-content:center;">Client Notes</div>
+        <h2 class="reveal reveal-delay-1">Said after the keys changed hands.</h2>
+      </div>
+      <div class="quote-wrap">
+        <div class="quote active" data-i="0">
+          <p>They designed around how we actually live, not how a brochure says a family should live. The house feels inevitable now — like it couldn't have been any other way.</p>
+          <div class="who">— R. Amonova, Terrace House</div>
+        </div>
+        <div class="quote" data-i="1">
+          <p>Weekly site updates meant we were never guessing. The build finished within two weeks of the date we were given at the start.</p>
+          <div class="who">— J. Karimov, Riverline Villa</div>
+        </div>
+        <div class="quote" data-i="2">
+          <p>What impressed us most was the restraint — they talked us out of three ideas that would have dated badly. Every one was the right call.</p>
+          <div class="who">— S. Nazarova, Courtyard Residence</div>
+        </div>
+      </div>
+      <div class="dots" id="quoteDots"></div>
+    </div>
+  </section>
+
+  <section id="contact">
+    <div class="wrap">
+      <div class="box reveal">
+        <div>
+          <h2>Have a site in mind?</h2>
+          <p>Tell us where the land is and what you're picturing. We reply within two working days with next steps.</p>
+        </div>
+        <div class="contact-actions">
+          <a class="btn btn-solid" href="https://wa.me/992000000000" target="_blank" rel="noopener">Message on WhatsApp</a>
+          <a class="btn" href="mailto:studio@nusratbuild.com">studio@nusratbuild.com</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot-grid">
+        <div class="foot-col foot-brand">
+          <div class="brand"><b>N</b>usrat Build</div>
+          <p>An architecture and construction studio designing residences with restraint, precision and a strong sense of place.</p>
+        </div>
+        <div class="foot-col">
+          <h4>Studio</h4>
+          <a href="#about">About</a>
+          <a href="#process">Process</a>
+          <a href="#portfolio">Portfolio</a>
+        </div>
+        <div class="foot-col">
+          <h4>Connect</h4>
+          <a href="https://wa.me/992000000000" target="_blank" rel="noopener">WhatsApp</a>
+          <a href="mailto:studio@nusratbuild.com">Email</a>
+          <a href="#" onclick="return false;">Instagram</a>
+        </div>
+        <div class="foot-col">
+          <h4>Studio Hours</h4>
+          <a href="#" onclick="return false;">Mon – Fri, 9:00–18:00</a>
+          <a href="#" onclick="return false;">Dushanbe, Tajikistan</a>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span>© 2026 Nusrat Build. All rights reserved.</span>
+        <span>Concept front-end — connect a backend to make forms and bookings live.</span>
+      </div>
+    </div>
+  </footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =========================================================
+   LOADER
+   ========================================================= */
+const loaderFill = document.getElementById('loaderFill');
+const loaderPct = document.getElementById('loaderPct');
+const loader = document.getElementById('loader');
+let pct = 0;
+const loadTimer = setInterval(()=>{
+  pct += Math.random()*14;
+  if(pct>=100){ pct=100; clearInterval(loadTimer); }
+  loaderFill.style.width = pct+'%';
+  loaderPct.textContent = Math.floor(pct)+'%';
+  if(pct===100){
+    setTimeout(()=>{ loader.classList.add('hide'); startBuildAnimation(); }, 350);
+  }
+}, 180);
+
+/* =========================================================
+   STARS (css layer)
+   ========================================================= */
+const starsLayer = document.getElementById('starsLayer');
+for(let i=0;i<70;i++){
+  const s = document.createElement('div');
+  s.className='star';
+  s.style.left = Math.random()*100+'%';
+  s.style.top = Math.random()*70+'%';
+  s.style.animationDelay = (Math.random()*4)+'s';
+  s.style.opacity = (Math.random()*0.5+0.1).toFixed(2);
+  starsLayer.appendChild(s);
+}
+
+/* =========================================================
+   NAV scroll state
+   ========================================================= */
+const header = document.getElementById('siteHeader');
+window.addEventListener('scroll', ()=>{
+  header.classList.toggle('scrolled', window.scrollY>40);
+});
+
+/* =========================================================
+   REVEAL ON SCROLL
+   ========================================================= */
+const revealEls = document.querySelectorAll('.reveal');
+const io = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){ e.target.classList.add('is-visible'); io.unobserve(e.target); }
+  });
+},{threshold:0.15});
+revealEls.forEach(el=>io.observe(el));
+
+/* =========================================================
+   COUNTERS
+   ========================================================= */
+const counters = document.querySelectorAll('.num');
+const cIo = new IntersectionObserver((entries)=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      const el = e.target;
+      const target = parseInt(el.dataset.target,10);
+      let cur = 0;
+      const step = Math.max(1, target/50);
+      const t = setInterval(()=>{
+        cur += step;
+        if(cur>=target){ cur=target; clearInterval(t); }
+        el.textContent = Math.floor(cur);
+      },30);
+      cIo.unobserve(el);
+    }
+  });
+},{threshold:0.4});
+counters.forEach(el=>cIo.observe(el));
+
+/* =========================================================
+   TESTIMONIAL CAROUSEL
+   ========================================================= */
+const quotes = document.querySelectorAll('.quote');
+const dotsWrap = document.getElementById('quoteDots');
+quotes.forEach((q,i)=>{
+  const d = document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.addEventListener('click', ()=>showQuote(i));
+  dotsWrap.appendChild(d);
+});
+let qIndex = 0;
+function showQuote(i){
+  quotes.forEach((q,idx)=>q.classList.toggle('active', idx===i));
+  dotsWrap.querySelectorAll('.dot').forEach((d,idx)=>d.classList.toggle('active', idx===i));
+  qIndex = i;
+}
+setInterval(()=>{ showQuote((qIndex+1)%quotes.length); }, 6000);
+
+/* =========================================================
+   THREE.JS HERO SCENE — villa constructs from blueprint
+   ========================================================= */
+const canvas = document.getElementById('hero-canvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0a0b0d, 0.045);
+
+const camera = new THREE.PerspectiveCamera(38, window.innerWidth/window.innerHeight, 0.1, 100);
+let camAngle = 0.6;
+let camRadius = 13;
+let camHeight = 4.2;
+
+function sizeRenderer(){
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  renderer.setSize(w,h,false);
+  camera.aspect = w/h;
+  camera.updateProjectionMatrix();
+}
+sizeRenderer();
+
+/* lighting */
+const hemi = new THREE.HemisphereLight(0x8a6a4a, 0x0a0b0d, 0.55);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight(0xe8c987, 1.3);
+sun.position.set(8,10,6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024,1024);
+sun.shadow.camera.left = -12; sun.shadow.camera.right = 12;
+sun.shadow.camera.top = 12; sun.shadow.camera.bottom = -12;
+scene.add(sun);
+
+const rim = new THREE.DirectionalLight(0x4a6a8a, 0.35);
+rim.position.set(-8,4,-6);
+scene.add(rim);
+
+/* ground */
+const groundGeo = new THREE.PlaneGeometry(60,60);
+const groundMat = new THREE.MeshStandardMaterial({color:0x121316, roughness:0.95, metalness:0.05});
+const ground = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
+
+/* villa group */
+const villa = new THREE.Group();
+scene.add(villa);
+
+const concreteMat = new THREE.MeshStandardMaterial({color:0x24262b, roughness:0.85, metalness:0.1});
+const bronzeMat = new THREE.MeshStandardMaterial({color:0x6b4f36, roughness:0.5, metalness:0.4});
+const glassMat = new THREE.MeshPhysicalMaterial({color:0x9fd6d0, roughness:0.05, metalness:0.1, transparent:true, opacity:0.35, envMapIntensity:1});
+const waterMat = new THREE.MeshPhysicalMaterial({color:0x0f4a44, roughness:0.08, metalness:0.2, transparent:true, opacity:0.75});
+
+function makePart(geo, mat, pos, castShadow=true){
+  const mesh = new THREE.Mesh(geo, mat.clone());
+  mesh.position.set(...pos);
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = true;
+  villa.add(mesh);
+  // wireframe overlay for construction reveal
+  const edges = new THREE.EdgesGeometry(geo);
+  const lineMat = new THREE.LineBasicMaterial({color:0xe8c987, transparent:true, opacity:1});
+  const lines = new THREE.LineSegments(edges, lineMat);
+  lines.position.copy(mesh.position);
+  villa.add(lines);
+  mesh.material.transparent = true;
+  mesh.material.opacity = 0;
+  return {mesh, lines};
+}
+
+const parts = [];
+parts.push(makePart(new THREE.BoxGeometry(6,1.2,4), concreteMat, [0,0.6,0]));
+parts.push(makePart(new THREE.BoxGeometry(3.6,1.6,2.8), concreteMat, [0.6,2.0,0]));
+parts.push(makePart(new THREE.BoxGeometry(0.08,1.4,2.6), glassMat, [2.4,2.0,0]));
+parts.push(makePart(new THREE.BoxGeometry(6.4,0.12,4.4), bronzeMat, [0,2.86,0]));
+parts.push(makePart(new THREE.BoxGeometry(5,0.06,2.6), waterMat, [0.2,-0.02,3.6]));
+
+/* palm trees */
+function makeTree(x,z){
+  const g = new THREE.Group();
+  const trunkMat = new THREE.MeshStandardMaterial({color:0x2b2420, roughness:0.9});
+  const leafMat = new THREE.MeshStandardMaterial({color:0x1b2f22, roughness:0.7});
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.09,1.8,6), trunkMat);
+  trunk.position.y = 0.9; trunk.castShadow=true;
+  g.add(trunk);
+  for(let i=0;i<5;i++){
+    const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.5,0.15,4), leafMat);
+    leaf.position.y = 1.85;
+    leaf.rotation.z = Math.PI/2.4;
+    leaf.rotation.y = (i/5)*Math.PI*2;
+    leaf.castShadow = true;
+    g.add(leaf);
+  }
+  g.position.set(x,0,z);
+  g.userData.sway = Math.random()*Math.PI*2;
+  scene.add(g);
+  return g;
+}
+const trees = [makeTree(-4.5,2.2), makeTree(-5.2,-1.5), makeTree(4.8,-2.6), makeTree(5.6,1.2)];
+
+/* drone */
+const drone = new THREE.Group();
+const droneBodyMat = new THREE.MeshStandardMaterial({color:0x18191c, roughness:0.4, metalness:0.6});
+const body = new THREE.Mesh(new THREE.OctahedronGeometry(0.12), droneBodyMat);
+body.castShadow = true;
+drone.add(body);
+const propGroup = new THREE.Group();
+for(let i=0;i<4;i++){
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.015,0.015,0.34,6), droneBodyMat);
+  arm.rotation.z = Math.PI/2;
+  arm.rotation.y = (i/4)*Math.PI*2;
+  arm.position.x = Math.cos((i/4)*Math.PI*2)*0.17;
+  arm.position.z = Math.sin((i/4)*Math.PI*2)*0.17;
+  propGroup.add(arm);
+  const prop = new THREE.Mesh(new THREE.BoxGeometry(0.16,0.006,0.02), droneBodyMat);
+  prop.position.x = Math.cos((i/4)*Math.PI*2)*0.34;
+  prop.position.z = Math.sin((i/4)*Math.PI*2)*0.34;
+  prop.userData.spin = true;
+  propGroup.add(prop);
+}
+drone.add(propGroup);
+const droneLight = new THREE.PointLight(0xff4d4d, 1.2, 2);
+droneLight.position.set(0,-0.05,0);
+drone.add(droneLight);
+scene.add(drone);
+
+/* mouse parallax */
+let mouseX=0, mouseY=0, targetParX=0, targetParY=0, curParX=0, curParY=0;
+window.addEventListener('mousemove', (e)=>{
+  mouseX = (e.clientX/window.innerWidth)*2-1;
+  mouseY = (e.clientY/window.innerHeight)*2-1;
+  targetParX = mouseX*0.9;
+  targetParY = mouseY*0.5;
+});
+
+/* construction reveal animation */
+let buildProgress = 0;
+let buildStarted = false;
+function startBuildAnimation(){ buildStarted = true; }
+
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.getElapsedTime();
+
+  if(buildStarted && buildProgress<1){
+    buildProgress = Math.min(1, buildProgress + dt*0.35);
+  }
+  const eased = 1-Math.pow(1-buildProgress,3);
+  parts.forEach((p,i)=>{
+    const finalOpacity = (i===2) ? 0.35 : 1; // glass wall stays translucent
+    p.mesh.material.opacity = buildStarted ? eased*finalOpacity : 0;
+    p.lines.material.opacity = buildStarted ? Math.max(0,1-eased) : 1;
+  });
+
+  // camera auto-orbit + parallax
+  curParX += (targetParX-curParX)*0.04;
+  curParY += (targetParY-curParY)*0.04;
+  camAngle += dt*0.045;
+  camera.position.x = Math.sin(camAngle)*camRadius + curParX*1.4;
+  camera.position.z = Math.cos(camAngle)*camRadius + curParX*0.6;
+  camera.position.y = camHeight + curParY*0.8;
+  camera.lookAt(0,1.2,0);
+
+  // trees sway
+  trees.forEach(tr=>{
+    tr.rotation.z = Math.sin(t*0.6+tr.userData.sway)*0.03;
+  });
+
+  // drone orbit
+  const dAngle = t*0.5;
+  drone.position.x = Math.sin(dAngle)*4.4;
+  drone.position.z = Math.cos(dAngle)*3.2 + 0.5;
+  drone.position.y = 3.3 + Math.sin(t*1.2)*0.15;
+  drone.rotation.y = -dAngle;
+  propGroup.children.forEach(c=>{ if(c.userData.spin) c.rotation.y += dt*40; });
+  droneLight.intensity = 0.8 + Math.sin(t*6)*0.6;
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', sizeRenderer);
+</script>
+</body>
+</html>
